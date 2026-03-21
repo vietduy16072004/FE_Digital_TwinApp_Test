@@ -32,7 +32,13 @@ Sử dụng phương pháp **TransformControls** để cung cấp các mũi tên
 ### 3\. Thuật toán cố định cao độ (Grounding Logic)
 
 Để tránh tình trạng vật thể bị "lún" xuống sàn hoặc bay lơ lửng, hệ thống tự động tính toán lại tọa độ $Y$ dựa trên chiều cao của khối:
-$$y = \frac{height}{2}$$
+
+<div align="center">
+
+# $$\mathbf{y = \frac{height}{2}}$$
+
+</div>
+
 Điều này đảm bảo đáy của cấu kiện luôn tiếp xúc chính xác với mặt sàn $y=0$.
 
 -----
@@ -62,7 +68,7 @@ Sau đó, truy cập địa chỉ: `http://localhost:5173` trên trình duyệt.
 ### 3\. Lưu ý khi làm việc với Git
 
   * Chỉ cần chạy lại `npm install` sau khi `git pull`.
-  * Ảnh demo được lưu tại: `Images/demo1.png`.
+  (./Images/demo1.png)
 
 -----
 

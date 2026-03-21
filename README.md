@@ -68,7 +68,7 @@ Sau đó, truy cập địa chỉ: `http://localhost:5173` trên trình duyệt.
 ### 3\. Lưu ý khi làm việc với Git
 
   * Chỉ cần chạy lại `npm install` sau khi `git pull`.
-  (./Images/demo1.png)
+  ![Frontend Demo](Images/demo1.png)
 
 -----
 

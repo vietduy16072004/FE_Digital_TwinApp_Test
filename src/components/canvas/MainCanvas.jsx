@@ -11,6 +11,7 @@ const MainCanvas = () => {
     transformMode, 
     setTransformMode,
     removeElement,
+    duplicateElement, // Lấy hàm nhân bản
     updateElementPosition, 
     updateElementRotation, 
     deselectElement 
@@ -18,18 +19,19 @@ const MainCanvas = () => {
   
   const orbitRef = useRef();
 
-  // [BỔ SUNG] Cài đặt phím tắt bàn phím
+  // Hệ thống phím tắt nâng cao
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Nhấn 'G' hoặc 'g' để di chuyển
-      if (event.key.toLowerCase() === 'g') {
-        setTransformMode('translate');
+      const key = event.key.toLowerCase();
+      
+      if (key === 'g') setTransformMode('translate');
+      if (key === 'r') setTransformMode('rotate');
+      
+      // Nhấn 'D' để nhân bản khối đang chọn - Task 6
+      if (key === 'd' && selectedElementId) {
+        duplicateElement(selectedElementId);
       }
-      // Nhấn 'R' hoặc 'r' để xoay
-      if (event.key.toLowerCase() === 'r') {
-        setTransformMode('rotate');
-      }
-      // Nhấn 'Delete' hoặc 'Backspace' để xóa khối đang chọn
+      
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedElementId) {
         removeElement(selectedElementId);
       }
@@ -37,7 +39,12 @@ const MainCanvas = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId, setTransformMode, removeElement]);
+  }, [selectedElementId, setTransformMode, removeElement, duplicateElement]);
+
+  // Hàm tính toán Snap to Grid - Task 5
+  const snapValue = (val, step = 0.5) => {
+    return Math.round(val / step) * step;
+  };
 
   return (
     <Canvas shadows camera={{ position: [8, 8, 8], fov: 45 }} onPointerMissed={() => deselectElement()}>
@@ -56,17 +63,32 @@ const MainCanvas = () => {
             <TransformControls 
               key={el.id} 
               mode={transformMode}
-              showY={transformMode === 'translate' ? false : true} 
+              showY={true} 
               onMouseDown={() => (orbitRef.current.enabled = false)}
               onMouseUp={(e) => {
                 orbitRef.current.enabled = true;
                 if (transformMode === 'translate') {
-                  const { x, z } = e.target.object.position;
+                  const { x, y, z } = e.target.object.position;
                   const height = el.args[1];
-                  updateElementPosition(el.id, [x, height / 2, z]);
+                  
+                  // Áp dụng Snap to Grid (Task 5) và Chống sụp sàn (Task 4)
+                  const snappedX = snapValue(x);
+                  const snappedZ = snapValue(z);
+                  const groundLevel = height / 2;
+                  const correctedY = Math.max(y, groundLevel);
+                  // Có thể snap cả Y nếu muốn xếp tầng khít
+                  const snappedY = snapValue(correctedY); 
+
+                  updateElementPosition(el.id, [snappedX, snappedY, snappedZ]);
                 } else {
+                  // Snap góc xoay (ví dụ snap mỗi 15 độ = PI/12)
                   const { x, y, z } = e.target.object.rotation;
-                  updateElementRotation(el.id, [x, y, z]);
+                  const angleStep = Math.PI / 12; 
+                  updateElementRotation(el.id, [
+                    snapValue(x, angleStep),
+                    snapValue(y, angleStep),
+                    snapValue(z, angleStep)
+                  ]);
                 }
               }}
             >

@@ -10,9 +10,9 @@ Dự án mô phỏng không gian số - thử nghiệm (Digital Twin - test) h�
 | :--- | :--- |
 | **React + Vite** | Framework chính, tối ưu tốc độ phản hồi HMR. |
 | **Three.js** | Core engine xử lý đồ họa WebGL. |
-| **@react-three/fiber** | Cầu nối giúp viết Three.js bằng cú pháp React. |
-| **@react-three/drei** | Thư viện bổ trợ (Grid, TransformControls, Environment). |
-| **Zustand** | Quản lý trạng thái (State Management) tập trung cho toàn bộ cấu kiện. |
+| **@react-three/fiber** | Render Three.js bằng cú pháp React component. |
+| **@react-three/drei** | Thư viện bổ trợ (Grid, TransformControls, Environment, ContactShadows). |
+| **Zustand** | Quản lý trạng thái (State Management) tập trung và đồng bộ dữ liệu. |
 
 -----
 
@@ -20,18 +20,18 @@ Dự án mô phỏng không gian số - thử nghiệm (Digital Twin - test) h�
 
 ### 1\. Quản lý dữ liệu tập trung (Zustand Store)
 
-Toàn bộ thông tin về vị trí (`position`), góc xoay (`rotation`), và loại hình dạng (`geometry`) được lưu trữ trong một Store duy nhất. Điều này giúp đồng bộ dữ liệu giữa bảng điều khiển UI 2D và không gian 3D.
+Toàn bộ thông tin về vị trí (`position`), góc xoay (`rotation`), loại hình dạng (`geometry`) và vật liệu (`materialId`) được lưu trữ tập trung. Điều này giúp đồng bộ dữ liệu giữa bảng điều khiển UI và không gian 3D.
 
 ### 2\. Tương tác vật thể (Transform Gizmo)
 
 Sử dụng phương pháp **TransformControls** để cung cấp các mũi tên điều hướng. Người dùng có thể:
 
-  * **Move Mode:** Di chuyển khối tự do trên mặt phẳng.
-  * **Rotate Mode:** Xoay khối theo các trục X, Y, Z để điều chỉnh hướng cấu kiện.
+  * **Move Mode (G):** Di chuyển khối tự do trên mặt phẳng.
+  * **Rotate Mode (R):** Xoay khối theo các trục X, Y, Z để điều chỉnh hướng cấu kiện.
 
 ### 3\. Thuật toán cố định cao độ (Grounding Logic)
 
-Để tránh tình trạng vật thể bị "lún" xuống sàn hoặc bay lơ lửng, hệ thống tự động tính toán lại tọa độ $Y$ dựa trên chiều cao của khối:
+* **Thuật toán Chống sụp sàn (Anti-Sinking):** Đảm bảo đáy cấu kiện luôn nằm trên mặt sàn hoặc mặt khối khác thông qua công thức:
 
 <div align="center">
 
@@ -39,7 +39,9 @@ Sử dụng phương pháp **TransformControls** để cung cấp các mũi tên
 
 </div>
 
-Điều này đảm bảo đáy của cấu kiện luôn tiếp xúc chính xác với mặt sàn $y=0$.
+  * **Snap to Grid (Bắt điểm):** Tự động căn chỉnh tọa độ về bội số của 0.5 đơn vị, giúp các khối luôn khít nhau tuyệt đối trên lưới.
+  * **Selection UX:** Hệ thống phản hồi thị giác bằng màu sắc (Rose highlight) khi vật thể được chọn.
+  * **Material Library:** Thư viện vật liệu PBR (Steel, Wood, Concrete, Plastic) với các thông số độ bóng và độ nhám thực tế.
 
 -----
 
@@ -68,12 +70,12 @@ Sau đó, truy cập địa chỉ: `http://localhost:5173` trên trình duyệt.
 ### 3\. Lưu ý khi làm việc với Git
 
   * Chỉ cần chạy lại `npm install` sau khi `git pull`.
-  ![Frontend Demo](Images/demo1.png)
-
+  ![Frontend Demo 1](Images/demo1.png) ![Frontend Demo 2](Images/demo2.png)
 -----
 
 ## 🎹 Phím tắt thao tác (Roadmap)
 
   * **G**: Chuyển sang chế độ Di chuyển (Grab/Move).
   * **R**: Chuyển sang chế độ Xoay (Rotate).
+  * **D**: Duplicate: Nhân bản cấu kiện đang chọn.
   * **Delete**: Xóa cấu kiện đang chọn.

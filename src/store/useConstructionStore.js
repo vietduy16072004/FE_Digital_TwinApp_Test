@@ -1,77 +1,102 @@
 import { create } from 'zustand';
+import apiClient from '../api/clients';
 
-export const SHAPE_DEFINITIONS = {
-  PILLAR: { name: 'Pillar', geometry: 'BOX', args: [1, 2, 1], color: '#60a5fa' },
-  COLUMN: { name: 'Column', geometry: 'CYLINDER', args: [0.25, 0.25, 1.5, 32], color: '#4ade80' },
-  BEAM: { name: 'Beam', geometry: 'BOX', args: [3, 0.5, 0.5], color: '#fcd34d' },
-  CONE_TRIANGLE: { name: 'Tri-Cone', geometry: 'CONE', args: [0.5, 1, 3], color: '#fb7185' }
-};
-
-export const MATERIAL_DEFINITIONS = {
-  STEEL: { name: 'Steel', color: '#94a3b8', metalness: 0.9, roughness: 0.1 },
-  WOOD: { name: 'Wood', color: '#a36a3e', metalness: 0.0, roughness: 0.8 },
-  CONCRETE: { name: 'Concrete', color: '#71717a', metalness: 0.0, roughness: 0.9 },
-  PLASTIC: { name: 'Plastic', color: '#3b82f6', metalness: 0.3, roughness: 0.4 }
-};
-
-const useConstructionStore = create((set) => ({
+/**
+ * useConstructionStore - Quản lý Element & Element Detail
+ * Đồng bộ trực tiếp với Element Service và Element Detail Service
+ */
+const useConstructionStore = create((set, get) => ({
   elements: [],
   selectedElementId: null,
+  currentDetails: [], 
   transformMode: 'translate',
-  currentMaterialId: 'STEEL',
+  loading: false,
+
+  // --- ELEMENT SERVICE ---
+  fetchElements: async (projectId) => {
+    if (!projectId) return;
+    set({ loading: true });
+    try {
+      const response = await apiClient.get(`/projects/${projectId}/elements`);
+      set({ elements: response.data.data || [], loading: false });
+    } catch (err) {
+      console.error("Lỗi fetch elements:", err);
+      set({ loading: false });
+    }
+  },
+
+  addElement: async (projectId, type) => {
+    try {
+      const response = await apiClient.post(`/projects/${projectId}/elements`, {
+        name: `New ${type}`,
+        type: type,
+        posX: 0, posY: 0.5, posZ: 0,
+        rotX: 0, rotY: 0, rotZ: 0
+      });
+      const newEl = response.data.data;
+      set(state => ({ elements: [...state.elements, newEl] }));
+      return newEl;
+    } catch (err) {
+      console.error("Lỗi tạo element:", err);
+    }
+  },
+
+  updateTransform: async (elementId, pos, rot) => {
+    // Cập nhật local trước để UI mượt (Optimistic)
+    set(state => ({
+      elements: state.elements.map(el => 
+        el.id === elementId ? { 
+          ...el, 
+          transform: { 
+            position: { x: pos[0], y: pos[1], z: pos[2] },
+            rotation: { x: rot[0], y: rot[1], z: rot[2] }
+          } 
+        } : el
+      )
+    }));
+
+    try {
+      await apiClient.put(`/elements/${elementId}`, {
+        posX: pos[0], posY: pos[1], posZ: pos[2],
+        rotX: rot[0], rotY: rot[1], rotZ: rot[2]
+      });
+    } catch (err) {
+      console.error("Lỗi sync transform:", err);
+    }
+  },
+
+  // --- ELEMENT DETAIL SERVICE ---
+  fetchElementDetails: async (elementId) => {
+    try {
+      const response = await apiClient.get(`/elements/${elementId}/details`);
+      set({ currentDetails: response.data.data || [] });
+    } catch (err) {
+      console.error("Lỗi fetch details:", err);
+    }
+  },
+
+  // Tương ứng @Post('elements/:elementId/details')
+  createElementDetail: async (elementId, data) => {
+    try {
+      await apiClient.post(`/elements/${elementId}/details`, {
+        faceName: data.faceName,
+        materialId: data.materialId,
+        localPosX: 0, localPosY: 0, localPosZ: 0,
+        scale: data.scale || 1,
+        args: {}
+      });
+      get().fetchElementDetails(elementId);
+    } catch (err) {
+      console.error("Lỗi thêm chi tiết mặt:", err);
+    }
+  },
 
   setTransformMode: (mode) => set({ transformMode: mode }),
-  setCurrentMaterial: (id) => set({ currentMaterialId: id }),
-
-  addElement: (type, position = [0, 0.5, 0]) => set((state) => ({
-    elements: [...state.elements, { 
-      id: Date.now(), 
-      ...SHAPE_DEFINITIONS[type], 
-      position, 
-      rotation: [0, 0, 0],
-      materialId: state.currentMaterialId 
-    }]
-  })),
-
-  // Chức năng nhân bản (Duplicate) - Task 6 Phase 2
-  duplicateElement: (id) => set((state) => {
-    const original = state.elements.find(el => el.id === id);
-    if (!original) return state;
-    
-    const newElement = {
-      ...original,
-      id: Date.now(),
-      // Dịch chuyển nhẹ để người dùng thấy khối mới tạo
-      position: [original.position[0] + 0.5, original.position[1], original.position[2] + 0.5]
-    };
-    
-    return {
-      elements: [...state.elements, newElement],
-      selectedElementId: newElement.id
-    };
-  }),
-
-  selectElement: (id) => set({ selectedElementId: id }),
-  deselectElement: () => set({ selectedElementId: null }),
-
-  updateElementPosition: (id, newPosition) => set((state) => ({
-    elements: state.elements.map(el => el.id === id ? { ...el, position: newPosition } : el)
-  })),
-
-  updateElementRotation: (id, newRotation) => set((state) => ({
-    elements: state.elements.map(el => el.id === id ? { ...el, rotation: newRotation } : el)
-  })),
-
-  updateElementMaterial: (id, materialId) => set((state) => ({
-    elements: state.elements.map(el => el.id === id ? { ...el, materialId } : el)
-  })),
-
-  removeElement: (id) => set((state) => ({
-    elements: state.elements.filter(el => el.id !== id),
-    selectedElementId: state.selectedElementId === id ? null : state.selectedElementId
-  })),
-
-  resetScene: () => set({ elements: [], selectedElementId: null, transformMode: 'translate' }),
+  selectElement: (id) => {
+    set({ selectedElementId: id });
+    if (id) get().fetchElementDetails(id);
+    else set({ currentDetails: [] });
+  },
 }));
 
 export default useConstructionStore;
